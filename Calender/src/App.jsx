@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import Calendar from "./components/Calender";
 import AddEvent from "./components/addevent";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Chat from "./components/Chat";
+
+
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -24,10 +29,22 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="min-h-screen  flex items-center justify-center p-6">
-      <Calendar />
-      <AddEvent/>
-    </div>
-  );
+  
+    // <div className="min-h-screen  flex items-center justify-center p-6">
+    //   <Calendar />
+    // </div>
+
+
+const [user, setUser] = useState(null);
+
+  if (!user)
+    return (
+      <div>
+        <Login onLogin={setUser} />
+        <Register />
+      </div>
+    );
+
+  return <Chat user={user} />;
+ 
 }
