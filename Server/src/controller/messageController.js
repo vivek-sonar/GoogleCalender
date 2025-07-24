@@ -19,6 +19,11 @@ export const sendMessage = async (req, res) => {
 
     const savedMessage = await newMessage.save();
     console.log("Received POST /sendmsg:", req.body);
+    console.log("Saved message:", savedMessage); // Debug log
+
+
+    // Emit to other users via Socket.io
+    req.app.get('io').emit("receiveMessage", savedMessage);
 
     res.status(201).json({
       message: "Message sent successfully",
@@ -46,6 +51,7 @@ export const getMessages = async (req, res) => {
       ]
     }).sort({ timestamp: 1 });
 
+    console.log("Fetched messages from DB:", messages); // Debug log
     res.status(200).json(messages);
   } catch (error) {
     console.error("Error fetching messages:", error);

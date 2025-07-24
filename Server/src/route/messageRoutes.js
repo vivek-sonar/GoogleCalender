@@ -8,9 +8,6 @@ const msgrouter = express.Router();
 msgrouter.post('/sendmsg', sendMessage);
 msgrouter.post('/getmsg', getMessages);
 
-
-
-
 msgrouter.get('/allmessages/:userId', getAllMessagesForUser);
 
 export default msgrouter;
