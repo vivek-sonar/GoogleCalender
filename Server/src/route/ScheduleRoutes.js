@@ -2,6 +2,7 @@ import express from "express";
 import {
   createSchedule,
   getAllSchedules,
+  getScheduleById ,
   updateSchedule,
   deleteSchedule
   
@@ -14,6 +15,7 @@ schedulerouter.post("/createschedule", createSchedule);
 
 // View all schedules
 schedulerouter.get("/getallschedules", getAllSchedules);
+schedulerouter.get("/getschedule/:id", getScheduleById);
 
 // Update a schedule
 schedulerouter.put("/updateschedule/:id", updateSchedule);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Calendar from "./components/Calender";
+import AddEvent from "./components/addevent";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -26,6 +27,7 @@ export default function App() {
   return (
     <div className="min-h-screen  flex items-center justify-center p-6">
       <Calendar />
+      <AddEvent/>
     </div>
   );
 }

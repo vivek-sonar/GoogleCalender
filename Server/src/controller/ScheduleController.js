@@ -1,13 +1,14 @@
 import Schedule from "../model/ScheduleSchema.js";
 import Event from "../model/EventSchema.js";
 import mongoose from "mongoose";
+import Notice from "../model/noticeSchema.js";
 
 // Create Schedule
 export const createSchedule = async (req, res) => {
   try {
     console.log("Incoming Request Body:", req.body);
 
-    const { schoolId, userId, eventId, startAt, endAt, note } = req.body;
+     const { schoolId, userId, eventId, noticeId, startAt, endAt, status, note } = req.body;
 
     // Only validate fields we currently have
     if (!eventId || !startAt || !endAt) {
@@ -22,14 +23,31 @@ export const createSchedule = async (req, res) => {
       return res.status(404).json({ error: "Event not found" });
     }
 
+
+    if (noticeId) {
+      const noticeExists = await Notice.findById(noticeId);
+      if (!noticeExists) {
+        return res.status(404).json({ error: "Notice not found" });
+      }
+    }
+
+    // Validation: endAt must be after startAt
+    if (new Date(endAt) <= new Date(startAt)) {
+      return res.status(400).json({ error: "endAt must be after startAt." });
+    }    
+
+
+
     // Create new schedule (skip schoolId/userId if not present)
-    const newSchedule = new Schedule({
-      schoolId: schoolId || null,  // default to null if not provided
+     const newSchedule = new Schedule({
+      schoolId: schoolId || null,
       userId: userId || null,
       eventId,
+      noticeId: noticeId || null,
       startAt,
       endAt,
-      note,
+      status: status || "pending",
+      note: note || "",
     });
 
     const savedSchedule = await newSchedule.save();
@@ -52,6 +70,7 @@ export const getAllSchedules = async (req, res) => {
   try {
     const schedules = await Schedule.find()
       .populate("eventId", "event_name event_location") // Populate only event info
+      .populate("noticeId", "title description")   // Populate notice fields
       .sort({ startAt: 1 });
     res.status(200).json(schedules);
   } catch (error) {
@@ -59,6 +78,36 @@ export const getAllSchedules = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch schedules" });
   }
 };
+
+
+
+
+// ---------------------- VIEW BY ID ----------------------
+export const getScheduleById = async (req, res) => {
+  try {
+    const { id } = req.params; // Get schedule ID from URL
+
+    const schedule = await Schedule.findById(id)
+      // .populate("schoolId", "school_name address") 
+      // .populate("userId", "name email")
+      .populate("eventId", "event_name event_location start_time end_time")
+      .populate("noticeId", "title description");
+
+    if (!schedule) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+
+    res.status(200).json({
+      message: "Schedule fetched successfully",
+      data: schedule,
+    });
+  } catch (error) {
+    console.error("Error fetching schedule by ID:", error);
+    res.status(500).json({ error: "Failed to fetch schedule" });
+  }
+};
+
+
 
 
 

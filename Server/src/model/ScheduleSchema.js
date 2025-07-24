@@ -5,24 +5,24 @@ const { Schema } = mongoose;
 const ScheduleSchema = new Schema(
   {
 
-     schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
-   
+
     // Link this schedule slot to a specific Event
-        eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
-// Notice reference
-         noticeId: { type: mongoose.Schema.Types.ObjectId, ref: "Notice", default: null },
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
+    // Notice reference
+    noticeId: { type: mongoose.Schema.Types.ObjectId, ref: "Notice" },
 
 
     // Full start + end datetime for the scheduled slot
     startAt: {
       type: String,
-      
+
     },
     endAt: {
       type: String,
-      
+
     },
 
     // Optional status/notes if needed later
@@ -33,11 +33,11 @@ const ScheduleSchema = new Schema(
     },
     note: {
       type: String,
-     
+
     },
   },
   {
-    timestamps: true, 
+    timestamps: true,
   }
 );
 

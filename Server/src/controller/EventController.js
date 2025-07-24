@@ -1,4 +1,5 @@
 import Event from "../model/EventSchema.js";
+import mongoose from "mongoose";
 
 // Add Event
 export const addEvent = async (req, res) => {
@@ -44,6 +45,30 @@ export const getAllEvents = async (req, res) => {
 
 
 
+
+
+// Get Event by ID
+export const getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid event ID" });
+    }
+
+    // Find event by ID
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    return res.status(200).json(event);
+  } catch (error) {
+    console.error("Error fetching event:", error);
+    res.status(500).json({ error: "Failed to fetch event" });
+  }
+};
 
 
 

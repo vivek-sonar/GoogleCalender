@@ -493,6 +493,7 @@ function Calendar() {
               placeholder="Event title (e.g., Exam, Holiday)"
               className="border rounded p-2 w-full mb-2 text-xs sm:text-sm focus:outline-none"
             />
+            
             <button
               onClick={handleEventSubmit}
               className="mt-2 px-4 py-1 bg-blue-500 text-white rounded text-xs sm:text-sm"
