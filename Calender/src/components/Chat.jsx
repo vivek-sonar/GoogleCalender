@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import axios from "axios";
 import moment from "moment";
-import { FaCheck, FaCheckDouble } from "react-icons/fa";
+import { FaCheck, FaCheckDouble, FaArrowLeft } from "react-icons/fa";
+import { LuSendHorizontal } from "react-icons/lu";
 
 const socket = io("http://localhost:5000");
 
@@ -15,6 +16,7 @@ const Chat = ({ user }) => {
   const [unseenMessages, setUnseenMessages] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showProfile, setShowProfile] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 1024);
   const messagesEndRef = useRef(null);
 
   const currentUserId = user.user._id;
@@ -136,6 +138,14 @@ const Chat = ({ user }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const getTimeLabel = (timestamp) => {
     if (!timestamp) return "";
     const messageDate = moment(timestamp);
@@ -146,9 +156,32 @@ const Chat = ({ user }) => {
     return messageDate.format("DD MMM");
   };
 
+  const goBackToUsers = () => {
+    setSelectedUser(null);
+    setShowProfile(false);
+  };
+
+
+
+const sortedUsers = [...allUsers]
+  .map((user) => {
+    const lastMsg = lastMessages[user._id];
+    return {
+      ...user,
+      lastMessageTime: lastMsg ? new Date(lastMsg.createdAt).getTime() : 0,
+    };
+  })
+  .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
+  .filter((u) => u.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+
   return (
     <div className="flex h-screen bg-gray-50 relative">
-      <div className="w-1/3 border-r overflow-y-auto p-4">
+      {/* Left Panel - Users List */}
+      <div
+        className={`w-full lg:w-1/3 border-r overflow-y-auto p-4 ${isMobileView && selectedUser ? "hidden" : "block"
+          }`}
+      >
         <h2 className="text-2xl font-semibold mb-4 px-2">Chats</h2>
         <input
           type="text"
@@ -158,9 +191,10 @@ const Chat = ({ user }) => {
           className="w-full mb-4 px-4 py-2 border rounded-full bg-gray-100"
         />
 
-        {allUsers
-          .filter((u) => u.name?.toLowerCase().includes(searchQuery.toLowerCase()))
-          .map((u) => {
+
+
+        {sortedUsers.map((u) => {
+
             const lastMsg = lastMessages[u._id];
             const previewText = lastMsg?.text || "Say hi 👋";
             const timeLabel = lastMsg?.createdAt ? getTimeLabel(lastMsg.createdAt) : "";
@@ -202,22 +236,39 @@ const Chat = ({ user }) => {
           })}
       </div>
 
-      <div className="w-2/3 p-6 flex flex-col bg-white shadow-md rounded-lg relative">
+      {/* Right Panel - Chat Area */}
+      <div
+        className={`w-full lg:w-2/3 p-6 flex flex-col bg-white shadow-md rounded-lg relative ${isMobileView && !selectedUser ? "hidden" : "block"
+          }`}
+      >
         {selectedUser ? (
           <>
             <div
               className="flex items-center gap-4 border-b pb-4 mb-3 shadow-sm cursor-pointer"
               onClick={() => setShowProfile(true)}
             >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedUser(null);
-                }}
-                className="text-2xl text-gray-500"
-              >
-                ←
-              </button>
+              {isMobileView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goBackToUsers();
+                  }}
+                  className="text-2xl text-gray-500"
+                >
+                  <FaArrowLeft />
+                </button>
+              )}
+              {!isMobileView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedUser(null);
+                  }}
+                  className="text-2xl text-gray-500"
+                >
+                  ←
+                </button>
+              )}
               <img
                 src={selectedUser.profilePic || "https://via.placeholder.com/40"}
                 alt={selectedUser.name}
@@ -257,7 +308,7 @@ const Chat = ({ user }) => {
                 const showLabel =
                   index === 0 ||
                   getTimeLabel(messages[index - 1]?.createdAt) !==
-                    getTimeLabel(msg.createdAt);
+                  getTimeLabel(msg.createdAt);
 
                 return (
                   <div key={index}>
@@ -270,9 +321,8 @@ const Chat = ({ user }) => {
                     )}
 
                     <div
-                      className={`flex items-end gap-2 ${
-                        isSender ? "justify-end" : "justify-start"
-                      }`}
+                      className={`flex items-end gap-2 ${isSender ? "justify-end" : "justify-start"
+                        }`}
                     >
                       {!isSender && (
                         <img
@@ -306,14 +356,15 @@ const Chat = ({ user }) => {
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="flex-grow px-4 py-2 border rounded-full bg-gray-100 text-sm"
+                className="flex-grow px-4 py-2 text-sm rounded-full bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 shadow-sm transition-all duration-300 placeholder-gray-500"
                 placeholder="Write a message..."
               />
               <button
                 onClick={sendMessage}
-                className="bg-purple-600 text-white px-5 py-2 rounded-full text-sm hover:bg-purple-700"
+                className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-all duration-300 shadow-md hover:shadow-lg active:scale-95"
+                aria-label="Send Message"
               >
-                Send
+                <LuSendHorizontal className="w-5 h-5" />
               </button>
             </div>
           </>
