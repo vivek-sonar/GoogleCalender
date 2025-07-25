@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import axios from "axios";
 import moment from "moment";
+import { FaCheck, FaCheckDouble } from "react-icons/fa";
 
 const socket = io("http://localhost:5000");
 
@@ -11,32 +12,49 @@ const Chat = ({ user }) => {
   const [allUsers, setAllUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [lastMessages, setLastMessages] = useState({});
-  const [searchQuery, setSearchQuery] = useState(""); // NEW: for search
+  const [unseenMessages, setUnseenMessages] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const currentUserId = user.user._id;
 
   const fetchUsers = async () => {
     try {
       const res = await axios.get("http://localhost:5000/auth/getallusers");
-      const otherUsers = res.data.filter((u) => u._id !== user.user._id);
+      const otherUsers = res.data.filter((u) => u._id !== currentUserId);
       setAllUsers(otherUsers);
 
-      otherUsers.forEach(async (u) => {
+      const unseenCounts = {};
+      for (const u of otherUsers) {
         try {
           const res = await axios.post("http://localhost:5000/messages/getmsg", {
-            senderId: user.user._id,
+            senderId: currentUserId,
             recipientId: u._id,
           });
           const msgs = res.data;
           if (msgs.length > 0) {
             const lastMsg = msgs[msgs.length - 1];
-            setLastMessages((prev) => ({
-              ...prev,
-              [u._id]: lastMsg,
-            }));
+            setLastMessages((prev) => ({ ...prev, [u._id]: lastMsg }));
+            let unseenCount = 0;
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              if (
+                msgs[i].senderId === u._id &&
+                msgs[i].recipientId === currentUserId &&
+                !msgs[i].seen
+              ) {
+                unseenCount++;
+              } else {
+                break;
+              }
+            }
+            unseenCounts[u._id] = unseenCount;
           }
         } catch (err) {
           console.error("Error fetching last message:", err);
         }
-      });
+      }
+      setUnseenMessages(unseenCounts);
     } catch (err) {
       console.error("Error fetching users:", err);
     }
@@ -46,7 +64,7 @@ const Chat = ({ user }) => {
     if (!selectedUser) return;
     try {
       const res = await axios.post("http://localhost:5000/messages/getmsg", {
-        senderId: user.user._id,
+        senderId: currentUserId,
         recipientId: selectedUser._id,
       });
       setMessages(res.data);
@@ -55,17 +73,31 @@ const Chat = ({ user }) => {
     }
   };
 
+  const markMessagesAsSeen = async () => {
+    if (!selectedUser) return;
+    try {
+      await axios.post("http://localhost:5000/messages/markseen", {
+        senderId: selectedUser._id,
+        recipientId: currentUserId,
+      });
+      setUnseenMessages((prev) => ({ ...prev, [selectedUser._id]: 0 }));
+      fetchMessages();
+    } catch (err) {
+      console.error("Error marking messages as seen:", err);
+    }
+  };
+
   const sendMessage = async () => {
     if (!text.trim() || !selectedUser) return;
     const messageData = {
-      senderId: user.user._id,
+      senderId: currentUserId,
       recipientId: selectedUser._id,
       text,
     };
     try {
       await axios.post("http://localhost:5000/messages/sendmsg", messageData);
       socket.emit("sendMessage", messageData);
-      setMessages((prev) => [...prev, messageData]);
+      setMessages((prev) => [...prev, { ...messageData, seen: false, createdAt: new Date() }]);
       setText("");
       setLastMessages((prev) => ({
         ...prev,
@@ -82,40 +114,42 @@ const Chat = ({ user }) => {
 
   useEffect(() => {
     fetchMessages();
+    if (selectedUser) markMessagesAsSeen();
+
     socket.on("receiveMessage", (data) => {
-      if (data.recipientId === user.user._id) {
+      if (data.senderId === selectedUser?._id && data.recipientId === currentUserId) {
         setMessages((prev) => [...prev, data]);
-        setLastMessages((prev) => ({
+        markMessagesAsSeen();
+      } else if (data.recipientId === currentUserId) {
+        setLastMessages((prev) => ({ ...prev, [data.senderId]: data }));
+        setUnseenMessages((prev) => ({
           ...prev,
-          [data.senderId]: data,
+          [data.senderId]: (prev[data.senderId] || 0) + 1,
         }));
       }
     });
+
     return () => socket.off("receiveMessage");
   }, [selectedUser]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const getTimeLabel = (timestamp) => {
     if (!timestamp) return "";
     const messageDate = moment(timestamp);
     const today = moment();
     const yesterday = moment().subtract(1, "day");
-
     if (messageDate.isSame(today, "day")) return "Today";
     if (messageDate.isSame(yesterday, "day")) return "Yesterday";
     return messageDate.format("DD MMM");
   };
 
-  // Filter users based on search query
-  const filteredUsers = allUsers.filter((u) =>
-    u.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Left Panel */}
+    <div className="flex h-screen bg-gray-50 relative">
       <div className="w-1/3 border-r overflow-y-auto p-4">
         <h2 className="text-2xl font-semibold mb-4 px-2">Chats</h2>
-
         <input
           type="text"
           placeholder="Search by name..."
@@ -124,33 +158,22 @@ const Chat = ({ user }) => {
           className="w-full mb-4 px-4 py-2 border rounded-full bg-gray-100"
         />
 
-        <div className="flex space-x-2 mb-4 px-2 overflow-x-auto">
-          {["Students", "Parents", "Teachers", "Admins"].map((role, i) => (
-            <button
-              key={i}
-              className={`px-4 py-1 rounded-full border ${
-                role === "Students" ? "bg-black text-white" : "bg-gray-200"
-              }`}
-            >
-              {role}
-            </button>
-          ))}
-        </div>
-
-        {/* Filtered User List */}
-        {filteredUsers.length > 0 ? (
-          filteredUsers.map((u) => {
+        {allUsers
+          .filter((u) => u.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+          .map((u) => {
             const lastMsg = lastMessages[u._id];
             const previewText = lastMsg?.text || "Say hi 👋";
-            const timeLabel = lastMsg?.createdAt
-              ? getTimeLabel(lastMsg.createdAt)
-              : "";
+            const timeLabel = lastMsg?.createdAt ? getTimeLabel(lastMsg.createdAt) : "";
+            const unseenCount = unseenMessages[u._id] || 0;
 
             return (
               <div
                 key={u._id}
-                onClick={() => setSelectedUser(u)}
-                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-100 rounded-lg transition"
+                onClick={() => {
+                  setSelectedUser(u);
+                  setShowProfile(false);
+                }}
+                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-100 hover:rounded-lg transition border-b"
               >
                 <div className="flex items-center">
                   <img
@@ -168,31 +191,32 @@ const Chat = ({ user }) => {
 
                 <div className="flex flex-col items-end space-y-1">
                   <span className="text-xs text-blue-600">{timeLabel}</span>
-                  {lastMsg && (
+                  {unseenCount > 0 && selectedUser?._id !== u._id && (
                     <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-0.5">
-                      2
+                      {unseenCount}
                     </span>
                   )}
                 </div>
               </div>
             );
-          })
-        ) : (
-          <p className="text-gray-400 text-center mt-4">No users found</p>
-        )}
+          })}
       </div>
 
-      {/* Right Panel */}
-      <div className="w-2/3 p-6 flex flex-col bg-white shadow-md rounded-lg">
+      <div className="w-2/3 p-6 flex flex-col bg-white shadow-md rounded-lg relative">
         {selectedUser ? (
           <>
-            {/* Header */}
-            <div className="flex items-center gap-3 border-b pb-4 mb-3 shadow-sm">
+            <div
+              className="flex items-center gap-4 border-b pb-4 mb-3 shadow-sm cursor-pointer"
+              onClick={() => setShowProfile(true)}
+            >
               <button
-                onClick={() => setSelectedUser(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedUser(null);
+                }}
                 className="text-2xl text-gray-500"
               >
-                &larr;
+                ←
               </button>
               <img
                 src={selectedUser.profilePic || "https://via.placeholder.com/40"}
@@ -205,10 +229,31 @@ const Chat = ({ user }) => {
               </div>
             </div>
 
-            {/* Chat Messages */}
+            {/* Profile Popup */}
+            {showProfile && (
+              <div className="absolute inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                <div className="bg-white p-6 rounded-full shadow-xl w-80 h-80 flex flex-col items-center">
+                  <img
+                    src={selectedUser.profilePic || "https://via.placeholder.com/100"}
+                    alt={selectedUser.name}
+                    className="w-24 h-24 rounded-full mb-4"
+                  />
+                  <h2 className="text-xl font-semibold mb-2">{selectedUser.name}</h2>
+                  <p className="text-gray-600">{selectedUser.email}</p>
+                  <button
+                    onClick={() => setShowProfile(false)}
+                    className="mt-6 text-sm text-purple-600 hover:underline"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Chat messages */}
             <div className="flex-grow overflow-y-auto space-y-3">
               {messages.map((msg, index) => {
-                const isSender = msg.senderId === user.user._id;
+                const isSender = msg.senderId === currentUserId;
                 const showLabel =
                   index === 0 ||
                   getTimeLabel(messages[index - 1]?.createdAt) !==
@@ -223,23 +268,40 @@ const Chat = ({ user }) => {
                         </span>
                       </div>
                     )}
-                    <div className={`flex ${isSender ? "justify-end" : "justify-start"}`}>
+
+                    <div
+                      className={`flex items-end gap-2 ${
+                        isSender ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      {!isSender && (
+                        <img
+                          src={selectedUser.profilePic || "https://via.placeholder.com/30"}
+                          alt="profile"
+                          className="w-6 h-6 rounded-full"
+                        />
+                      )}
+
                       <div
-                        className={`rounded-2xl px-4 py-2 max-w-xs text-sm ${
-                          isSender
-                            ? "bg-purple-600 text-white"
-                            : "bg-gray-200 text-black"
-                        }`}
+                        className={`max-w-xs px-4 py-2 rounded-2xl text-sm relative 
+                        ${isSender ? "bg-green-400 text-white self-end" : "bg-purple-500 text-white self-start"}`}
                       >
-                        {msg.text}
+                        <div className="flex justify-between items-end gap-2">
+                          <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                          <div className="flex items-end gap-1 text-[10px] opacity-80 whitespace-nowrap self-end">
+                            <span>{moment(msg.createdAt).format("hh:mm A")}</span>
+                            {isSender && (msg.seen ? <FaCheckDouble /> : <FaCheck />)}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Box */}
+            {/* Input */}
             <div className="flex items-center gap-2 mt-4 border-t pt-4">
               <input
                 value={text}
@@ -256,9 +318,7 @@ const Chat = ({ user }) => {
             </div>
           </>
         ) : (
-          <div className="text-gray-400 m-auto text-lg">
-            Select a user to start chatting
-          </div>
+          <div className="text-gray-400 m-auto text-lg">Select a user to start chatting</div>
         )}
       </div>
     </div>
