@@ -7,8 +7,9 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    userRole: "user",
-    messageId: "msgid123" // replace as needed
+    userRole: "student",
+    registeredVia: "email",
+
   });
 
   const handleChange = (e) => {
@@ -34,8 +35,17 @@ const Register = () => {
         <input name="password" type="password" placeholder="Password" className="mb-2 w-full px-3 py-2 border rounded" onChange={handleChange} />
         <input name="confirmPassword" type="password" placeholder="Confirm Password" className="mb-2 w-full px-3 py-2 border rounded" onChange={handleChange} />
         <select name="userRole" className="mb-3 w-full px-3 py-2 border rounded" onChange={handleChange}>
-          <option value="user">User</option>
           <option value="admin">Admin</option>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="parent">Parent</option>
+        </select>
+
+
+         <select name="registeredVia" className="mb-3 w-full px-3 py-2 border rounded" onChange={handleChange}>
+          <option value="email">Email</option>
+          <option value="google">Google</option>
+       
         </select>
         <button className="bg-green-600 text-white w-full py-2 rounded hover:bg-green-700">
           Register
