@@ -1,9 +1,25 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
-  darkMode: "class", // dark mode toggle ke liye
+
+
+
+
+// tailwind.config.js
+export default {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}", // Adjust based on your project structure
+  ],
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        rightslide: {
+          '0%': { transform: 'translateX(80px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+      },
+      animation: {
+        rightslide: 'rightslide 0.7s ease-out forwards',
+      },
+    },
   },
   plugins: [],
 };

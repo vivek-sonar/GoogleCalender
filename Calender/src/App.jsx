@@ -4,6 +4,7 @@ import AddEvent from "./components/addevent";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Chat from "./components/Chat";
+import LandingPage from "./components/LandingPage";
 
 
 
@@ -35,16 +36,36 @@ export default function App() {
     // </div>
 
 
-const [user, setUser] = useState(null);
 
-  if (!user)
-    return (
-      <div>
-        <Login onLogin={setUser} />
-        <Register />
-      </div>
-    );
 
-  return <Chat user={user} />;
+
+
+// const [user, setUser] = useState(null);
+
+//   if (!user)
+//     return (
+//       <div>
+//         <Login onLogin={setUser} />
+//         <Register />
+//       </div>
+//     );
+
+//   return <Chat user={user} />;
+
+
+
+
+return(
+   <div className="min-h-screen  flex items-center justify-center p-6  ">
+    <LandingPage/>
+  </div>
+);
+
+
+
+
+
+
+
  
 }
