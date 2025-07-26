@@ -18,7 +18,7 @@ const CustomCarousel = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-72 max-w-5xl overflow-hidden rounded-xl">
+    <div className="relative w-full h-72 max-w-5xl overflow-hidden rounded-xl max-md:h-[350px] ">
       <AnimatePresence mode="wait">
         <motion.img
           key={images[current]}
