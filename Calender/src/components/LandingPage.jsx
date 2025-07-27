@@ -14,7 +14,7 @@ const LandingPage = () => {
           </div>
 
           {/* MAIN TEXT */}
-         <h1 className="text-[66px] max-md:text-10xl leading-tight text-black font-poppins font-normal not-italic">
+         <h1 className="md:text-[66px] text-5xl max-md:text-10xl leading-tight text-black font-poppins font-normal not-italic">
             AI Assistant <br />School Management Platform
           </h1>
 
@@ -39,7 +39,7 @@ const LandingPage = () => {
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="w-[80%] max-md:w-full max-md:mt-28 md:mt-0"
+          className="w-[80%] max-md:w-full max-md:mt-20 md:mt-0 max-[1023px]:hidden"
         >
           <div className=" bg-[radial-gradient(at_left_bottom,_rgb(76,0,130),_rgb(88,28,135),_rgb(109,40,217),_rgb(126,34,206),_rgb(192,132,252),_rgb(243,232,255))] 
             backdrop-blur-xl 
